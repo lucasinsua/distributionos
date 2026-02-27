@@ -59,7 +59,7 @@ export const POST: APIRoute = async ({ request }) => {
       if (magnet) {
         try {
           await sendEmail({
-            from: "hello@notifications.yourdomain.com",
+            from: "hello@notifications.kintrion.com",
             to: email,
             subject: `Here's your free resource: ${magnet.title}`,
             html: `

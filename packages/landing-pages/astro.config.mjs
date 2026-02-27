@@ -2,7 +2,7 @@ import { defineConfig } from "astro/config";
 import node from "@astrojs/node";
 
 export default defineConfig({
-  site: "https://learn.yourdomain.com",
+  site: "https://back.kintrion.com",
   output: "hybrid",
   adapter: node({ mode: "standalone" }),
   build: {

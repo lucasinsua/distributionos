@@ -79,7 +79,7 @@ export class LandingPageService {
     });
 
     // Update lead magnet with landing page URL
-    const pageUrl = `https://learn.yourdomain.com/${slug}`;
+    const pageUrl = `https://back.kintrion.com/${slug}`;
     await db
       .from("lead_magnets")
       .update({ landing_page_url: pageUrl })

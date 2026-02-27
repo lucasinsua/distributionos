@@ -234,7 +234,7 @@ async function run() {
   stage(3, "Generating landing page");
   try {
     const slug = niche.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-    const pageUrl = `https://learn.yourdomain.com/${slug}`;
+    const pageUrl = `https://back.kintrion.com/${slug}`;
 
     const { data: content, error } = await db
       .from("content")

@@ -112,7 +112,7 @@ export class SeoArticleService {
       metaTitle,
       metaDescription,
       slug,
-      publishedUrl: input.publishImmediately ? `https://blog.yourdomain.com/${slug}` : null,
+      publishedUrl: input.publishImmediately ? `https://blog.kintrion.com/${slug}` : null,
       crossPostUrls,
       status: input.publishImmediately ? "published" : "draft",
     };
@@ -206,7 +206,7 @@ export class SeoArticleService {
     article: { title: string; body: string },
     canonicalSlug: string
   ): Promise<string | null> {
-    const canonicalUrl = `https://blog.yourdomain.com/${canonicalSlug}`;
+    const canonicalUrl = `https://blog.kintrion.com/${canonicalSlug}`;
 
     switch (platform) {
       case "medium": {

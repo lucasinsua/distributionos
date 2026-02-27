@@ -79,7 +79,7 @@ export class NurtureService {
     if (firstStep) {
       try {
         await sendEmail({
-          from: "course@notifications.yourdomain.com",
+          from: "course@notifications.kintrion.com",
           to: (lead as Record<string, unknown>).email as string,
           subject: firstStep.subject,
           html: firstStep.body,
