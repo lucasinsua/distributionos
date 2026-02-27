@@ -1,4 +1,4 @@
-import { getSupabaseClient, generateContent, type Database } from "@prospecting-engine/shared";
+import { getSupabaseClient, generateContent, searchHN, type Database } from "@prospecting-engine/shared";
 
 type SignalRow = Database["public"]["Tables"]["signals"]["Row"];
 
@@ -114,11 +114,55 @@ export class PersonalizationService {
 
     if (depth === "medium") return signals;
 
-    // Deep: additional research (Twitter, blog, GitHub)
-    // In production: real-time API calls to gather fresh data
-    signals.personal = {
-      recentActivity: "[Research lead's recent tweets, blog posts, GitHub activity]",
-    };
+    // Deep: additional research via Hacker News and other sources
+    try {
+      const companyName = (company?.name as string) ?? "";
+      const companyDomain = (company?.domain as string) ?? "";
+      const searchQuery = companyName || companyDomain;
+
+      if (searchQuery) {
+        const hnResults = await searchHN(searchQuery, {
+          hitsPerPage: 10,
+        });
+
+        if (hnResults.length > 0) {
+          const recentActivity = hnResults
+            .slice(0, 5)
+            .map((r) => {
+              const typeLabel = r.type === "story" ? "Story" : "Comment";
+              const pointsLabel = r.points > 0 ? ` (${r.points} pts)` : "";
+              const snippet = r.text.length > 200 ? r.text.slice(0, 200) + "..." : r.text;
+              return `[${typeLabel}${pointsLabel}] ${r.title ?? snippet} — by ${r.author} on ${r.createdAt}`;
+            })
+            .join("\n");
+
+          signals.personal = {
+            source: "hacker_news",
+            recentActivity,
+            totalResults: hnResults.length,
+            topResult: {
+              title: hnResults[0]!.title,
+              url: hnResults[0]!.url,
+              points: hnResults[0]!.points,
+              author: hnResults[0]!.author,
+            },
+          };
+        } else {
+          signals.personal = {
+            recentActivity: `No recent Hacker News activity found for "${searchQuery}".`,
+          };
+        }
+      } else {
+        signals.personal = {
+          recentActivity: "No company name or domain available for deep research.",
+        };
+      }
+    } catch {
+      // Fall back to placeholder if HN search fails
+      signals.personal = {
+        recentActivity: "Deep research unavailable — external API call failed.",
+      };
+    }
 
     return signals;
   }

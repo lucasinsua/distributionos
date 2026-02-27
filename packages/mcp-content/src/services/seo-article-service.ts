@@ -209,15 +209,132 @@ export class SeoArticleService {
     const canonicalUrl = `https://blog.yourdomain.com/${canonicalSlug}`;
 
     switch (platform) {
-      case "medium":
-        // Medium API: POST https://api.medium.com/v1/users/{userId}/posts
-        return null; // TODO: implement
-      case "devto":
-        // Dev.to API: POST https://dev.to/api/articles
-        return null; // TODO: implement
-      case "hashnode":
-        // Hashnode GraphQL API
-        return null; // TODO: implement
+      case "medium": {
+        const mediumToken = process.env.MEDIUM_TOKEN;
+        const mediumUserId = process.env.MEDIUM_USER_ID;
+        if (!mediumToken || !mediumUserId) {
+          const _ = article;
+          return null;
+        }
+        try {
+          const res = await fetch(
+            `https://api.medium.com/v1/users/${mediumUserId}/posts`,
+            {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${mediumToken}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                title: article.title,
+                contentFormat: "markdown",
+                content: article.body,
+                canonicalUrl: canonicalUrl,
+                publishStatus: "public",
+              }),
+            }
+          );
+          if (!res.ok) return null;
+          const data = (await res.json()) as { data?: { url?: string } };
+          return data.data?.url ?? null;
+        } catch {
+          return null;
+        }
+      }
+      case "devto": {
+        const devToApiKey = process.env.DEV_TO_API_KEY;
+        if (!devToApiKey) {
+          const _ = article;
+          return null;
+        }
+        try {
+          const tags = article.title
+            .toLowerCase()
+            .split(/\s+/)
+            .filter((w) => w.length > 3)
+            .slice(0, 4);
+          const res = await fetch("https://dev.to/api/articles", {
+            method: "POST",
+            headers: {
+              "api-key": devToApiKey,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              article: {
+                title: article.title,
+                body_markdown: article.body,
+                canonical_url: canonicalUrl,
+                published: true,
+                tags,
+              },
+            }),
+          });
+          if (!res.ok) return null;
+          const data = (await res.json()) as { url?: string };
+          return data.url ?? null;
+        } catch {
+          return null;
+        }
+      }
+      case "hashnode": {
+        const hashnodeToken = process.env.HASHNODE_TOKEN;
+        const hashnodePublicationId = process.env.HASHNODE_PUBLICATION_ID;
+        if (!hashnodeToken || !hashnodePublicationId) {
+          const _ = article;
+          return null;
+        }
+        try {
+          const mutation = `
+            mutation CreateStory($input: CreateStoryInput!) {
+              createStory(input: $input) {
+                post {
+                  slug
+                  publication {
+                    domain
+                  }
+                }
+              }
+            }
+          `;
+          const slug = this.slugify(article.title);
+          const res = await fetch("https://gql.hashnode.com", {
+            method: "POST",
+            headers: {
+              Authorization: hashnodeToken,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              query: mutation,
+              variables: {
+                input: {
+                  title: article.title,
+                  contentMarkdown: article.body,
+                  slug,
+                  isPartOfPublication: {
+                    publicationId: hashnodePublicationId,
+                  },
+                  tags: [],
+                },
+              },
+            }),
+          });
+          if (!res.ok) return null;
+          const data = (await res.json()) as {
+            data?: {
+              createStory?: {
+                post?: { slug?: string; publication?: { domain?: string } };
+              };
+            };
+          };
+          const post = data.data?.createStory?.post;
+          if (post?.publication?.domain && post?.slug) {
+            return `https://${post.publication.domain}/${post.slug}`;
+          }
+          return null;
+        } catch {
+          return null;
+        }
+      }
       default:
         return null;
     }

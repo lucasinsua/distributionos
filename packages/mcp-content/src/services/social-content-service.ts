@@ -42,12 +42,12 @@ export class SocialContentService {
         } else {
           content = await this.generateTweet(input.topic, input.tone);
         }
-        hashtags = this.generateHashtags(input.topic, "twitter");
+        hashtags = await this.generateHashtags(input.topic, "twitter");
         break;
 
       case "linkedin":
         content = await this.generateLinkedInPost(input.topic, input.tone, input.style);
-        hashtags = this.generateHashtags(input.topic, "linkedin");
+        hashtags = await this.generateHashtags(input.topic, "linkedin");
         break;
 
       case "reddit":
@@ -198,19 +198,43 @@ export class SocialContentService {
       });
 
       const reply = response.text.trim();
-      return reply.length > 0 ? reply : placeholder;
+      if (reply.length > 0) {
+        return `⚠️ REQUIRES HUMAN REVIEW before posting.\n\n${reply}`;
+      }
+      return placeholder;
     } catch {
       return placeholder;
     }
   }
 
-  private generateHashtags(topic: string, platform: string): string[] {
-    // In production: research trending and relevant hashtags
-    const base = topic.toLowerCase().replace(/\s+/g, "");
-    if (platform === "twitter") {
-      return [`#${base}`, "#buildinpublic", "#saas"];
+  private async generateHashtags(topic: string, platform: string): Promise<string[]> {
+    const fallbackBase = topic.toLowerCase().replace(/\s+/g, "");
+    const fallback =
+      platform === "twitter"
+        ? [`#${fallbackBase}`, "#buildinpublic", "#saas"]
+        : [`#${fallbackBase}`, "#productivity"];
+
+    try {
+      const systemPrompt = "You are a social media hashtag expert.";
+      const userPrompt =
+        `Generate 5-8 relevant hashtags for a ${platform} post about "${topic}". ` +
+        `Return only the hashtags, one per line. Each hashtag must start with #.`;
+
+      const response = await generateContent(systemPrompt, userPrompt, {
+        maxTokens: 256,
+        temperature: 0.7,
+      });
+
+      const hashtags = response.text
+        .trim()
+        .split("\n")
+        .map((line) => line.trim())
+        .filter((line) => line.startsWith("#"));
+
+      return hashtags.length > 0 ? hashtags : fallback;
+    } catch {
+      return fallback;
     }
-    return [`#${base}`, "#productivity"];
   }
 
   private estimateReach(platform: string, style: string): string {

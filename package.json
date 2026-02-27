@@ -11,7 +11,16 @@
     "test": "turbo test",
     "typecheck": "turbo typecheck",
     "clean": "turbo clean",
-    "db:migrate": "turbo db:migrate --filter=@prospecting-engine/shared"
+    "db:migrate": "turbo db:migrate --filter=@prospecting-engine/shared",
+    "validate": "node scripts/validate-env.mjs",
+    "seed": "node scripts/seed.mjs",
+    "pipeline": "node scripts/run-pipeline.mjs",
+    "deploy": "bash scripts/deploy.sh",
+    "deploy:landing": "bash scripts/deploy.sh landing",
+    "deploy:dashboard": "bash scripts/deploy.sh dashboard",
+    "deploy:mcp": "bash scripts/deploy.sh mcp",
+    "deploy:migrate": "bash scripts/deploy.sh migrate",
+    "deploy:jobs": "bash scripts/deploy.sh jobs"
   },
   "devDependencies": {
     "turbo": "^2.4.0",
