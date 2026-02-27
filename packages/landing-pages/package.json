@@ -10,6 +10,8 @@
     "clean": "rm -rf dist .turbo .astro"
   },
   "dependencies": {
+    "@astrojs/node": "^8.3.0",
+    "@prospecting-engine/shared": "*",
     "astro": "^4.16.0"
   },
   "devDependencies": {

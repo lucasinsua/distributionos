@@ -1,4 +1,10 @@
-import { getSupabaseClient, type Database } from "@prospecting-engine/shared";
+import {
+  getSupabaseClient,
+  type Database,
+  searchHNPainPoints,
+  searchRedditPainPoints,
+  generateStructuredContent,
+} from "@prospecting-engine/shared";
 
 type PainPointRow = Database["public"]["Tables"]["pain_points"]["Row"];
 
@@ -111,20 +117,35 @@ export class PainPointService {
   }
 
   private async scrapeReddit(
-    _niche: string
+    niche: string
   ): Promise<Array<{ source: string; content: string; url: string | null; timestamp: string }>> {
-    // Reddit API integration: search subreddits for pain-point language
-    // Patterns: "is there a tool", "I wish", "frustrated with", "looking for"
-    // Uses Reddit JSON API (append .json to URLs) or Pushshift
-    return [];
+    try {
+      const results = await searchRedditPainPoints(niche);
+      return results.map((r) => ({
+        source: "reddit",
+        content: `${r.title}\n${r.text}`.trim(),
+        url: r.url,
+        timestamp: r.createdAt,
+      }));
+    } catch {
+      return [];
+    }
   }
 
   private async scrapeHackerNews(
-    _niche: string
+    niche: string
   ): Promise<Array<{ source: string; content: string; url: string | null; timestamp: string }>> {
-    // HN Algolia API: search Ask HN, Show HN, and comments
-    // Endpoint: https://hn.algolia.com/api/v1/search
-    return [];
+    try {
+      const results = await searchHNPainPoints(niche);
+      return results.map((r) => ({
+        source: "hacker_news",
+        content: `${r.title ?? ""}\n${r.text}`.trim(),
+        url: r.url,
+        timestamp: r.createdAt,
+      }));
+    } catch {
+      return [];
+    }
   }
 
   private async scrapeTwitter(
@@ -145,20 +166,65 @@ export class PainPointService {
     signals: Array<{ source: string; content: string; url: string | null; timestamp: string }>,
     niche: string
   ): PainPointResult[] {
-    // In production: use embeddings to cluster related signals,
-    // then score each cluster by frequency (count), recency (timestamp),
-    // and alignment (semantic similarity to SaaS product descriptions).
-    // For now, deduplicate by content similarity and assign base scores.
-    return signals.map((s) => ({
-      topic: niche,
-      description: s.content.slice(0, 500),
-      source: s.source,
-      sourceUrl: s.url,
-      frequencyScore: 50,
-      recencyScore: 50,
-      alignmentScore: 50,
-      compositeScore: 50,
-      rawSignals: [{ content: s.content, source: s.source, url: s.url }],
-    }));
+    if (signals.length === 0) return [];
+
+    // Group signals by source, then cluster by keyword overlap
+    const clusters = new Map<string, Array<{ source: string; content: string; url: string | null; timestamp: string }>>();
+
+    for (const signal of signals) {
+      const words = signal.content.toLowerCase().split(/\s+/).filter((w) => w.length > 4);
+      let assigned = false;
+
+      for (const [key, group] of clusters) {
+        const keyWords = new Set(key.toLowerCase().split(/\s+/));
+        const overlap = words.filter((w) => keyWords.has(w)).length;
+        if (overlap >= 3) {
+          group.push(signal);
+          assigned = true;
+          break;
+        }
+      }
+
+      if (!assigned) {
+        clusters.set(signal.content.slice(0, 200), [signal]);
+      }
+    }
+
+    const now = Date.now();
+
+    return Array.from(clusters.entries()).map(([key, group]) => {
+      // Frequency score: more signals = higher
+      const frequencyScore = Math.min(100, group.length * 20);
+
+      // Recency score: more recent = higher
+      const timestamps = group
+        .map((s) => new Date(s.timestamp).getTime())
+        .filter((t) => !isNaN(t));
+      const newest = timestamps.length > 0 ? Math.max(...timestamps) : now;
+      const hoursSinceNewest = (now - newest) / (1000 * 60 * 60);
+      const recencyScore = Math.max(0, Math.min(100, 100 - hoursSinceNewest));
+
+      // Alignment score: how well does the content match the niche
+      const nicheWords = new Set(niche.toLowerCase().split(/\s+/));
+      const contentWords = key.toLowerCase().split(/\s+/);
+      const nicheOverlap = contentWords.filter((w) => nicheWords.has(w)).length;
+      const alignmentScore = Math.min(100, nicheOverlap * 25 + 25);
+
+      const compositeScore = Math.round(
+        frequencyScore * 0.4 + recencyScore * 0.35 + alignmentScore * 0.25
+      );
+
+      return {
+        topic: niche,
+        description: key.slice(0, 500),
+        source: group[0]!.source,
+        sourceUrl: group[0]!.url,
+        frequencyScore,
+        recencyScore,
+        alignmentScore,
+        compositeScore,
+        rawSignals: group.map((s) => ({ content: s.content, source: s.source, url: s.url })),
+      };
+    }).sort((a, b) => b.compositeScore - a.compositeScore);
   }
 }

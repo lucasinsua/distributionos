@@ -1,4 +1,4 @@
-import { getSupabaseClient, type Database } from "@prospecting-engine/shared";
+import { getSupabaseClient, type Database, findCompaniesUsingTech } from "@prospecting-engine/shared";
 
 type CompanyRow = Database["public"]["Tables"]["companies"]["Row"];
 type ProspectListRow = Database["public"]["Tables"]["prospect_lists"]["Row"];
@@ -165,20 +165,55 @@ export class ProspectListService {
   }
 
   private async searchGitHub(
-    _criteria: Record<string, unknown>,
-    _limit: number
+    criteria: Record<string, unknown>,
+    limit: number
   ) {
     // Search GitHub for companies using competitor OSS or adjacent tech
     // API: GitHub REST/GraphQL — search repos, org profiles
-    return [] as Array<{
-      companyName: string;
-      domain: string | null;
-      techStack?: string[];
-      email?: string;
-      firstName?: string;
-      lastName?: string;
-      role?: string;
-    }>;
+    try {
+      const techStack = criteria.techStack ?? criteria.keywords ?? [];
+      const keywords: string[] = Array.isArray(techStack)
+        ? (techStack as string[])
+        : [String(techStack)];
+
+      if (keywords.length === 0) {
+        return [] as Array<{
+          companyName: string;
+          domain: string | null;
+          techStack?: string[];
+          email?: string;
+          firstName?: string;
+          lastName?: string;
+          role?: string;
+        }>;
+      }
+
+      const results = await findCompaniesUsingTech(keywords);
+
+      return results.slice(0, limit).map((r) => ({
+        companyName: r.ownerName,
+        domain: null as string | null,
+        techStack: r.topics,
+      })) as Array<{
+        companyName: string;
+        domain: string | null;
+        techStack?: string[];
+        email?: string;
+        firstName?: string;
+        lastName?: string;
+        role?: string;
+      }>;
+    } catch {
+      return [] as Array<{
+        companyName: string;
+        domain: string | null;
+        techStack?: string[];
+        email?: string;
+        firstName?: string;
+        lastName?: string;
+        role?: string;
+      }>;
+    }
   }
 
   private async searchProductHunt(

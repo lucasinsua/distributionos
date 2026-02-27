@@ -1,4 +1,4 @@
-import { getSupabaseClient, type Database } from "@prospecting-engine/shared";
+import { getSupabaseClient, generateContent, type Database } from "@prospecting-engine/shared";
 
 type SignalRow = Database["public"]["Tables"]["signals"]["Row"];
 
@@ -44,8 +44,8 @@ export class PersonalizationService {
     // Gather personalization signals based on depth
     const signals = await this.gatherSignals(lead, depth);
 
-    // Generate personalized version (in production: Claude API)
-    const personalized = this.applyPersonalization(template, lead, signals);
+    // Generate personalized version using Claude API
+    const personalized = await this.applyPersonalization(template, lead, signals);
 
     return {
       leadId,
@@ -123,7 +123,7 @@ export class PersonalizationService {
     return signals;
   }
 
-  private applyPersonalization(
+  private async applyPersonalization(
     template: string,
     lead: Record<string, unknown>,
     signals: {
@@ -132,22 +132,51 @@ export class PersonalizationService {
       painPoints: string[];
       timing: string | null;
     }
-  ): string {
-    // In production: use Claude API to rewrite the template with personalization
-    // For now: simple placeholder replacement
-    let result = template;
-    result = result.replace("{{first_name}}", (lead.first_name as string) ?? "there");
-    result = result.replace("{{company}}", (signals.company?.name as string) ?? "your company");
-    result = result.replace("{{role}}", (lead.role as string) ?? "your role");
+  ): Promise<string> {
+    try {
+      const systemPrompt =
+        "You are an expert cold email personalization specialist. Rewrite the template email using the personalization signals provided. Keep the same structure but make it feel personal and relevant. Output only the email text.";
 
-    if (signals.timing) {
-      result = result.replace("{{timing_hook}}", signals.timing);
+      const userPrompt = [
+        "## Template Email",
+        template,
+        "",
+        "## Lead Info",
+        `Name: ${(lead.first_name as string) ?? "Unknown"} ${(lead.last_name as string) ?? ""}`.trim(),
+        `Role: ${(lead.role as string) ?? "Unknown"}`,
+        "",
+        "## Company Context",
+        signals.company ? JSON.stringify(signals.company, null, 2) : "No company data available.",
+        "",
+        "## Pain Points",
+        signals.painPoints.length > 0 ? signals.painPoints.join("\n") : "No pain points identified.",
+        "",
+        "## Timing Hook",
+        signals.timing ?? "No specific timing context.",
+      ].join("\n");
+
+      const result = await generateContent(systemPrompt, userPrompt, {
+        temperature: 0.7,
+        maxTokens: 1024,
+      });
+
+      return result.text;
+    } catch {
+      // Fall back to simple placeholder replacement on failure
+      let result = template;
+      result = result.replace("{{first_name}}", (lead.first_name as string) ?? "there");
+      result = result.replace("{{company}}", (signals.company?.name as string) ?? "your company");
+      result = result.replace("{{role}}", (lead.role as string) ?? "your role");
+
+      if (signals.timing) {
+        result = result.replace("{{timing_hook}}", signals.timing);
+      }
+
+      if (signals.painPoints.length > 0) {
+        result = result.replace("{{pain_point}}", signals.painPoints[0]!);
+      }
+
+      return result;
     }
-
-    if (signals.painPoints.length > 0) {
-      result = result.replace("{{pain_point}}", signals.painPoints[0]!);
-    }
-
-    return result;
   }
 }

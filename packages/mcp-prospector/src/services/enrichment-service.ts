@@ -1,4 +1,4 @@
-import { getSupabaseClient } from "@prospecting-engine/shared";
+import { getSupabaseClient, verifyEmail, searchDomainEmails } from "@prospecting-engine/shared";
 
 interface EnrichmentInput {
   email?: string;
@@ -66,23 +66,52 @@ export class EnrichmentService {
   }
 
   private async enrichPerson(email: string): Promise<EnrichmentResult["person"]> {
-    // Hunter.io: verify email, find person name and role
-    // Endpoint: GET https://api.hunter.io/v2/email-verifier?email=...
-    // Clearbit: enrich person by email
-    // Endpoint: GET https://person.clearbit.com/v2/people/find?email=...
-    // TODO: Implement API calls
-    const _ = email;
-    return null;
+    try {
+      const verification = await verifyEmail(email);
+      if (!verification.valid) {
+        return null;
+      }
+
+      const domain = email.split("@")[1];
+      const domainResults = await searchDomainEmails(domain, { limit: 5 });
+
+      const match = domainResults.emails.find(
+        (e) => e.email.toLowerCase() === email.toLowerCase()
+      );
+
+      if (!match) {
+        return null;
+      }
+
+      return {
+        firstName: match.firstName,
+        lastName: match.lastName,
+        role: match.position,
+        linkedinUrl: match.linkedinUrl,
+        twitterHandle: match.twitterHandle,
+      };
+    } catch {
+      return null;
+    }
   }
 
   private async enrichCompany(domain: string): Promise<EnrichmentResult["company"]> {
-    // Clearbit: company enrichment
-    // Endpoint: GET https://company.clearbit.com/v2/companies/find?domain=...
-    // Clay: additional enrichment data
-    // BuiltWith / Wappalyzer: tech stack detection
-    // TODO: Implement API calls
-    const _ = domain;
-    return null;
+    try {
+      const domainResults = await searchDomainEmails(domain, { limit: 1 });
+
+      return {
+        name: domainResults.organization,
+        domain: domainResults.domain,
+        industry: null,
+        employeeCount: null,
+        techStack: [],
+        fundingStage: null,
+        annualRevenueEst: null,
+        description: null,
+      };
+    } catch {
+      return null;
+    }
   }
 
   private async persistEnrichment(

@@ -1,4 +1,4 @@
-import { getSupabaseClient, type Database } from "@prospecting-engine/shared";
+import { getSupabaseClient, type Database, sendEmail } from "@prospecting-engine/shared";
 
 type EmailSequenceRow = Database["public"]["Tables"]["email_sequences"]["Row"];
 type InteractionRow = Database["public"]["Tables"]["interactions"]["Row"];
@@ -73,9 +73,25 @@ export class NurtureService {
       }
     }
 
-    // In production: call Loops.so or ConvertKit API
-    // Loops: POST https://app.loops.so/api/v1/transactional
-    // ConvertKit: POST https://api.convertkit.com/v3/sequences/{id}/subscribe
+    // Send the first email in the sequence via Resend
+    const steps = sequence.steps as Array<{ step_number: number; subject: string; body: string; delay_days: number }>;
+    const firstStep = steps.find((s) => s.step_number === 1);
+    if (firstStep) {
+      try {
+        await sendEmail({
+          from: "course@notifications.yourdomain.com",
+          to: (lead as Record<string, unknown>).email as string,
+          subject: firstStep.subject,
+          html: firstStep.body,
+          tags: [
+            { name: "sequence_id", value: sequenceId },
+            { name: "step", value: "1" },
+          ],
+        });
+      } catch {
+        // Email delivery failure is non-fatal; enrollment still proceeds
+      }
+    }
 
     // Record enrollment interaction
     await db.from("interactions").insert({
