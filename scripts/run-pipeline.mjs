@@ -18,6 +18,20 @@
 
 import { createClient } from "@supabase/supabase-js";
 import { parseArgs } from "node:util";
+import { readFileSync } from "fs";
+import { resolve } from "path";
+
+// Load .env file
+try {
+  const envPath = resolve(process.cwd(), ".env");
+  for (const line of readFileSync(envPath, "utf-8").split("\n")) {
+    const t = line.trim();
+    if (!t || t.startsWith("#")) continue;
+    const eq = t.indexOf("=");
+    if (eq === -1) continue;
+    if (!process.env[t.slice(0, eq)]) process.env[t.slice(0, eq)] = t.slice(eq + 1);
+  }
+} catch {}
 
 // ---------------------------------------------------------------------------
 // Config

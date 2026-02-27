@@ -8,6 +8,20 @@
  */
 
 import { createClient } from "@supabase/supabase-js";
+import { readFileSync } from "fs";
+import { resolve } from "path";
+
+// Load .env file
+try {
+  const envPath = resolve(process.cwd(), ".env");
+  for (const line of readFileSync(envPath, "utf-8").split("\n")) {
+    const t = line.trim();
+    if (!t || t.startsWith("#")) continue;
+    const eq = t.indexOf("=");
+    if (eq === -1) continue;
+    if (!process.env[t.slice(0, eq)]) process.env[t.slice(0, eq)] = t.slice(eq + 1);
+  }
+} catch {}
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
