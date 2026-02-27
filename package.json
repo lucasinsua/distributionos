@@ -20,7 +20,9 @@
     "deploy:dashboard": "bash scripts/deploy.sh dashboard",
     "deploy:mcp": "bash scripts/deploy.sh mcp",
     "deploy:migrate": "bash scripts/deploy.sh migrate",
-    "deploy:jobs": "bash scripts/deploy.sh jobs"
+    "deploy:jobs": "bash scripts/deploy.sh jobs",
+    "dashboard": "npm run dev --workspace=@prospecting-engine/dashboard",
+    "landing": "npm run dev --workspace=@prospecting-engine/landing-pages"
   },
   "devDependencies": {
     "turbo": "^2.4.0",
