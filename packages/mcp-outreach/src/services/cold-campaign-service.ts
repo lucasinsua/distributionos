@@ -1,4 +1,11 @@
-import { getSupabaseClient, getMaxSendsForDay, type Database } from "@prospecting-engine/shared";
+import {
+  getSupabaseClient,
+  getMaxSendsForDay,
+  createInstantlyCampaign,
+  launchInstantlyCampaign,
+  listWarmedAccounts,
+  type Database,
+} from "@prospecting-engine/shared";
 
 type ProspectListRow = Database["public"]["Tables"]["prospect_lists"]["Row"];
 type CampaignRow = Database["public"]["Tables"]["campaigns"]["Row"];
@@ -99,9 +106,46 @@ export class ColdCampaignService {
       .update({ status: "in_use" })
       .eq("id", input.prospectListId);
 
-    // In production: call Instantly.ai API to create and start campaign
-    // POST https://api.instantly.ai/api/v1/campaign/create
-    // POST https://api.instantly.ai/api/v1/campaign/launch
+    // Create campaign in Instantly.ai
+    const instantlyCampaign = await createInstantlyCampaign({
+      name: `Cold: ${list.name}`,
+      emailAccount: domains,
+      sequences: [
+        {
+          steps: [
+            {
+              subject: "Quick question about {{company}}",
+              body: "Hi {{firstName}},\n\nI noticed {{company}} and wanted to reach out...",
+              delay: 0,
+            },
+            {
+              subject: "Re: Quick question about {{company}}",
+              body: "Hi {{firstName}},\n\nJust following up on my previous email...",
+              delay: 3,
+            },
+          ],
+        },
+      ],
+    });
+
+    // Update campaign record with Instantly campaign ID
+    await db
+      .from("campaigns")
+      .update({
+        config: {
+          prospectListId: input.prospectListId,
+          templateId: input.templateId,
+          dailyLimit: input.dailyLimit,
+          sendingDomains: domains,
+          instantlyCampaignId: instantlyCampaign.campaignId,
+        },
+      })
+      .eq("id", campaign.id);
+
+    // Launch campaign immediately if requested
+    if (input.startImmediately) {
+      await launchInstantlyCampaign(instantlyCampaign.campaignId);
+    }
 
     return {
       campaignId: campaign.id,
@@ -115,8 +159,11 @@ export class ColdCampaignService {
   }
 
   private async getWarmedDomains(): Promise<string[]> {
-    // In production: query Instantly.ai API for warmed domains
-    // GET https://api.instantly.ai/api/v1/account/warmup/status
-    return ["outreach1.yourdomain.com", "outreach2.yourdomain.com"];
+    const accounts = await listWarmedAccounts();
+    const ready = accounts.filter((a) => a.isReady).map((a) => a.email);
+    if (ready.length === 0) {
+      throw new Error("No warmed email accounts available. Start warmup first.");
+    }
+    return ready;
   }
 }

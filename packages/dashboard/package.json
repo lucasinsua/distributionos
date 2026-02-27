@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@prospecting-engine/shared": "*",
+    "@supabase/supabase-js": "^2.98.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },

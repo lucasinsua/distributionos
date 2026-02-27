@@ -1,4 +1,4 @@
-import { getSupabaseClient, type Database } from "@prospecting-engine/shared";
+import { getSupabaseClient, generateContent, type Database } from "@prospecting-engine/shared";
 
 type SaasProductRow = Database["public"]["Tables"]["saas_products"]["Row"];
 type LeadMagnetRow = Database["public"]["Tables"]["lead_magnets"]["Row"];
@@ -64,7 +64,7 @@ export class SeoArticleService {
     const brief = this.generateBrief(input.keyword, input.wordCount);
 
     // Generate article (in production: Claude API call)
-    const article = this.generateArticle(brief, input.keyword, product, leadMagnet);
+    const article = await this.generateArticle(brief, input.keyword, product, leadMagnet);
 
     const slug = this.slugify(article.title);
     const metaTitle = `${article.title} | ${(product as Record<string, unknown> | null)?.name ?? "Blog"}`;
@@ -135,14 +135,13 @@ export class SeoArticleService {
     };
   }
 
-  private generateArticle(
+  private async generateArticle(
     brief: { keyword: string; targetWordCount: number; headings: string[] },
     keyword: string,
-    _product: Record<string, unknown> | null,
-    _leadMagnet: Record<string, unknown> | null
+    product: Record<string, unknown> | null,
+    leadMagnet: Record<string, unknown> | null
   ) {
-    // In production: call Claude API with the brief to generate full article
-    return {
+    const placeholder = {
       title: `The Complete Guide to ${keyword} in 2026`,
       excerpt: `Everything you need to know about ${keyword}, including step-by-step instructions and best practices.`,
       body: `[AI-generated ${brief.targetWordCount}-word article about ${keyword}]`,
@@ -154,6 +153,52 @@ export class SeoArticleService {
         description: `Everything you need to know about ${keyword}`,
       },
     };
+
+    try {
+      const systemPrompt =
+        "You are an expert SEO content writer. Generate a comprehensive, well-structured article optimized for the target keyword. Include engaging headers (H2/H3), practical examples, and actionable advice. Write in a professional but approachable tone.";
+
+      let userPrompt = `Write an SEO-optimized article about "${keyword}".\n`;
+      userPrompt += `Target word count: ${brief.targetWordCount} words.\n`;
+      userPrompt += `Use these headings as a guide:\n${brief.headings.map((h) => `- ${h}`).join("\n")}\n`;
+      if (product) {
+        userPrompt += `\nProduct context: ${product.name ?? ""}${product.description ? ` - ${product.description}` : ""}. Naturally weave in how this product helps readers.\n`;
+      }
+      if (leadMagnet) {
+        userPrompt += `\nInclude a CTA for this lead magnet: "${leadMagnet.title ?? leadMagnet.name ?? "free resource"}"${leadMagnet.description ? ` (${leadMagnet.description})` : ""}. Place CTAs after the intro, mid-article, and in the conclusion.\n`;
+      }
+
+      const response = await generateContent(systemPrompt, userPrompt, {
+        maxTokens: 8192,
+        temperature: 0.7,
+      });
+
+      const text = response.text.trim();
+      const lines = text.split("\n").filter((l) => l.trim().length > 0);
+
+      // Extract title: first line (strip leading # if present)
+      const title = lines[0].replace(/^#+\s*/, "").trim();
+      // Extract excerpt: first paragraph after the title
+      const excerpt = lines.length > 1 ? lines[1].trim() : placeholder.excerpt;
+      // Body is everything after the title line
+      const body = lines.slice(1).join("\n\n");
+      const wordCount = body.split(/\s+/).length;
+
+      return {
+        title,
+        excerpt,
+        body,
+        wordCount,
+        schema: {
+          "@context": "https://schema.org",
+          "@type": "Article",
+          headline: title,
+          description: excerpt,
+        },
+      };
+    } catch {
+      return placeholder;
+    }
   }
 
   private async crossPost(

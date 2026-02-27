@@ -1,4 +1,4 @@
-import { getSupabaseClient, type Database } from "@prospecting-engine/shared";
+import { getSupabaseClient, generateContent, type Database } from "@prospecting-engine/shared";
 
 type ContentRow = Database["public"]["Tables"]["content"]["Row"];
 
@@ -38,22 +38,22 @@ export class SocialContentService {
     switch (input.platform) {
       case "twitter":
         if (input.style === "thread") {
-          content = this.generateTwitterThread(input.topic, input.tone);
+          content = await this.generateTwitterThread(input.topic, input.tone);
         } else {
-          content = this.generateTweet(input.topic, input.tone);
+          content = await this.generateTweet(input.topic, input.tone);
         }
         hashtags = this.generateHashtags(input.topic, "twitter");
         break;
 
       case "linkedin":
-        content = this.generateLinkedInPost(input.topic, input.tone, input.style);
+        content = await this.generateLinkedInPost(input.topic, input.tone, input.style);
         hashtags = this.generateHashtags(input.topic, "linkedin");
         break;
 
       case "reddit":
       case "indie_hackers":
       case "hacker_news":
-        content = this.generateCommunityReply(input.topic, input.platform, input.tone);
+        content = await this.generateCommunityReply(input.topic, input.platform, input.tone);
         break;
 
       default:
@@ -93,9 +93,8 @@ export class SocialContentService {
     };
   }
 
-  private generateTwitterThread(topic: string, tone: string): string[] {
-    // In production: Claude API generates a 5-10 tweet thread
-    return [
+  private async generateTwitterThread(topic: string, tone: string): Promise<string[]> {
+    const placeholder = [
       `🧵 Thread: Everything I've learned about ${topic}\n\nAfter months of research, here are the key insights most people miss:`,
       `1/ [First insight about ${topic}]\n\nThis is the foundation everything else builds on.`,
       `2/ [Second insight about ${topic}]\n\nMost people get this wrong.`,
@@ -103,29 +102,106 @@ export class SocialContentService {
       `4/ [Practical takeaway]\n\nHere's exactly how to apply this today.`,
       `5/ If you found this helpful, I put together a free resource that goes deeper.\n\n[Link to lead magnet]\n\nRetweet the first tweet to help others find this 🙏`,
     ];
+
+    try {
+      const systemPrompt =
+        "You are a Twitter/X growth expert who writes viral threads. Write concise, punchy tweets that drive engagement. Each tweet should be under 280 characters. Use hooks, insights, and a clear CTA at the end.";
+      const userPrompt =
+        `Write a 5-7 tweet thread about "${topic}". Tone: ${tone}.\n` +
+        `Return ONLY a JSON array of strings, where each string is one tweet in the thread. No other text.`;
+
+      const response = await generateContent(systemPrompt, userPrompt, {
+        maxTokens: 2048,
+        temperature: 0.7,
+      });
+
+      const parsed = JSON.parse(response.text.trim());
+      if (Array.isArray(parsed) && parsed.length > 0 && parsed.every((t: unknown) => typeof t === "string")) {
+        return parsed;
+      }
+      return placeholder;
+    } catch {
+      return placeholder;
+    }
   }
 
-  private generateTweet(topic: string, _tone: string): string {
-    return `[AI-generated tweet about ${topic} with engaging hook and CTA]`;
+  private async generateTweet(topic: string, tone: string): Promise<string> {
+    const placeholder = `[AI-generated tweet about ${topic} with engaging hook and CTA]`;
+
+    try {
+      const systemPrompt =
+        "You are a Twitter/X growth expert. Write a single, highly engaging tweet that drives likes, retweets, and replies. Maximum 280 characters.";
+      const userPrompt = `Write one tweet about "${topic}". Tone: ${tone}. Return ONLY the tweet text, nothing else.`;
+
+      const response = await generateContent(systemPrompt, userPrompt, {
+        maxTokens: 256,
+        temperature: 0.7,
+      });
+
+      const tweet = response.text.trim();
+      return tweet.length > 0 && tweet.length <= 280 ? tweet : placeholder;
+    } catch {
+      return placeholder;
+    }
   }
 
-  private generateLinkedInPost(topic: string, _tone: string, _style: string): string {
-    return `[AI-generated LinkedIn post about ${topic}]\n\n` +
+  private async generateLinkedInPost(topic: string, tone: string, style: string): Promise<string> {
+    const placeholder =
+      `[AI-generated LinkedIn post about ${topic}]\n\n` +
       `Storytelling format with:\n` +
       `- Hook in first line\n` +
       `- Personal anecdote or data point\n` +
       `- 3-5 key insights\n` +
       `- Soft CTA to lead magnet or conversation`;
+
+    try {
+      const systemPrompt =
+        "You are a LinkedIn content strategist who writes posts that get high engagement. Use the LinkedIn-native format: a strong hook on the first line, short paragraphs, line breaks for readability, and a conversation-starting CTA at the end.";
+      const userPrompt =
+        `Write a LinkedIn post about "${topic}". Tone: ${tone}. Style: ${style}.\n` +
+        `Include a hook, a personal anecdote or data point, 3-5 key insights, and a soft CTA. Return ONLY the post text.`;
+
+      const response = await generateContent(systemPrompt, userPrompt, {
+        maxTokens: 2048,
+        temperature: 0.7,
+      });
+
+      const post = response.text.trim();
+      return post.length > 0 ? post : placeholder;
+    } catch {
+      return placeholder;
+    }
   }
 
-  private generateCommunityReply(topic: string, platform: string, _tone: string): string {
-    return `[AI-drafted ${platform} reply about ${topic}]\n\n` +
+  private async generateCommunityReply(topic: string, platform: string, tone: string): Promise<string> {
+    const placeholder =
+      `[AI-drafted ${platform} reply about ${topic}]\n\n` +
       `⚠️ REQUIRES HUMAN REVIEW before posting.\n\n` +
       `Guidelines:\n` +
       `- Provides genuine, complete answer\n` +
       `- Link to free resource is supplementary, not the goal\n` +
       `- Respects community rules\n` +
       `- 10:1 helpful-to-promotional ratio`;
+
+    try {
+      const systemPrompt =
+        `You are a helpful community member on ${platform}. Write genuine, value-first replies that follow community rules. ` +
+        `Never be overtly promotional. Provide a complete, useful answer. Any mention of external resources should be supplementary and natural, not the focus. ` +
+        `Maintain a 10:1 helpful-to-promotional ratio. The reply REQUIRES HUMAN REVIEW before posting.`;
+      const userPrompt =
+        `Write a community reply about "${topic}" for ${platform}. Tone: ${tone}.\n` +
+        `Provide a genuine, helpful answer. Return ONLY the reply text.`;
+
+      const response = await generateContent(systemPrompt, userPrompt, {
+        maxTokens: 1024,
+        temperature: 0.7,
+      });
+
+      const reply = response.text.trim();
+      return reply.length > 0 ? reply : placeholder;
+    } catch {
+      return placeholder;
+    }
   }
 
   private generateHashtags(topic: string, platform: string): string[] {
