@@ -136,16 +136,34 @@ async function run() {
   // ── Stage 1: Pain Points ──────────────────────────────────────
   stage(1, "Discovering pain points");
   try {
-    const { searchHNPainPoints } = await import("../packages/shared/dist/clients/hn.js");
-    const { searchRedditPainPoints } = await import("../packages/shared/dist/clients/reddit.js");
+    // Search HN via Algolia API (no build step needed)
+    const hnResp = await fetch(
+      `https://hn.algolia.com/api/v1/search_by_date?query=${encodeURIComponent(niche)}&tags=story&hitsPerPage=20`
+    );
+    const hnData = await hnResp.json();
+    const hnItems = (hnData.hits ?? []).map((h) => ({
+      title: h.title ?? "",
+      text: h.story_text ?? h.title ?? "",
+      url: h.url ?? `https://news.ycombinator.com/item?id=${h.objectID}`,
+    }));
 
-    const [hnResults, redditResults] = await Promise.allSettled([
-      searchHNPainPoints(niche),
-      searchRedditPainPoints(niche),
-    ]);
+    // Search Reddit via public JSON API
+    let redditItems = [];
+    try {
+      const redditResp = await fetch(
+        `https://www.reddit.com/search.json?q=${encodeURIComponent(niche)}&sort=relevance&limit=20`,
+        { headers: { "User-Agent": "ProspectingEngine/1.0" } }
+      );
+      const redditData = await redditResp.json();
+      redditItems = (redditData?.data?.children ?? []).map((c) => ({
+        title: c.data.title ?? "",
+        text: c.data.selftext ?? c.data.title ?? "",
+        url: `https://reddit.com${c.data.permalink}`,
+      }));
+    } catch {
+      console.log("  Reddit API unavailable, continuing with HN results only");
+    }
 
-    const hnItems = hnResults.status === "fulfilled" ? hnResults.value : [];
-    const redditItems = redditResults.status === "fulfilled" ? redditResults.value : [];
     const allSignals = [...hnItems, ...redditItems];
 
     console.log(`  Found ${hnItems.length} HN signals, ${redditItems.length} Reddit signals`);
