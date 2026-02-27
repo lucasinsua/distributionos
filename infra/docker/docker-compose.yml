@@ -1,0 +1,57 @@
+version: "3.9"
+
+services:
+  # ── MCP Servers ──────────────────────────────────────
+  mcp-prospector:
+    build:
+      context: ../../
+      dockerfile: infra/docker/Dockerfile.mcp
+      args:
+        PACKAGE_NAME: mcp-prospector
+    env_file: ../../.env
+    restart: unless-stopped
+
+  mcp-content:
+    build:
+      context: ../../
+      dockerfile: infra/docker/Dockerfile.mcp
+      args:
+        PACKAGE_NAME: mcp-content
+    env_file: ../../.env
+    restart: unless-stopped
+
+  mcp-outreach:
+    build:
+      context: ../../
+      dockerfile: infra/docker/Dockerfile.mcp
+      args:
+        PACKAGE_NAME: mcp-outreach
+    env_file: ../../.env
+    restart: unless-stopped
+
+  mcp-router:
+    build:
+      context: ../../
+      dockerfile: infra/docker/Dockerfile.mcp
+      args:
+        PACKAGE_NAME: mcp-router
+    env_file: ../../.env
+    restart: unless-stopped
+
+  mcp-analytics:
+    build:
+      context: ../../
+      dockerfile: infra/docker/Dockerfile.mcp
+      args:
+        PACKAGE_NAME: mcp-analytics
+    env_file: ../../.env
+    restart: unless-stopped
+
+  # ── Dashboard ────────────────────────────────────────
+  dashboard:
+    build:
+      context: ../../
+      dockerfile: infra/docker/Dockerfile.dashboard
+    ports:
+      - "3000:80"
+    restart: unless-stopped

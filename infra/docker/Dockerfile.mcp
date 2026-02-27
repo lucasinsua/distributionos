@@ -1,0 +1,41 @@
+FROM node:20-slim AS builder
+
+ARG PACKAGE_NAME
+
+WORKDIR /app
+
+# Copy root package files
+COPY package.json package-lock.json* turbo.json ./
+
+# Copy shared package
+COPY packages/shared/package.json packages/shared/
+COPY packages/shared/tsconfig.json packages/shared/
+COPY packages/shared/src packages/shared/src
+
+# Copy target MCP package
+COPY packages/${PACKAGE_NAME}/package.json packages/${PACKAGE_NAME}/
+COPY packages/${PACKAGE_NAME}/tsconfig.json packages/${PACKAGE_NAME}/
+COPY packages/${PACKAGE_NAME}/src packages/${PACKAGE_NAME}/src
+
+# Copy base tsconfig
+COPY tsconfig.base.json ./
+
+# Install dependencies and build
+RUN npm install --workspaces
+RUN npx turbo build --filter=@prospecting-engine/${PACKAGE_NAME}
+
+# ── Production image ──
+FROM node:20-slim
+
+ARG PACKAGE_NAME
+
+WORKDIR /app
+
+COPY --from=builder /app/packages/${PACKAGE_NAME}/dist ./dist
+COPY --from=builder /app/packages/${PACKAGE_NAME}/package.json ./
+COPY --from=builder /app/packages/shared/dist ./node_modules/@prospecting-engine/shared/dist
+COPY --from=builder /app/packages/shared/package.json ./node_modules/@prospecting-engine/shared/
+
+RUN npm install --omit=dev
+
+CMD ["node", "dist/index.js"]

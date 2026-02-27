@@ -1,0 +1,180 @@
+---
+interface Props {
+  title: string;
+  description?: string;
+  ogImage?: string;
+}
+
+const { title, description = "Free resources to help you grow", ogImage } = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content={description} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    {ogImage && <meta property="og:image" content={ogImage} />}
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>{title}</title>
+  </head>
+  <body>
+    <slot />
+  </body>
+</html>
+
+<style is:global>
+  :root {
+    --color-primary: #6366f1;
+    --color-primary-dark: #4f46e5;
+    --color-bg: #ffffff;
+    --color-bg-alt: #f9fafb;
+    --color-text: #111827;
+    --color-text-muted: #6b7280;
+    --color-border: #e5e7eb;
+    --max-width: 680px;
+  }
+
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color: var(--color-text);
+    background: var(--color-bg);
+    line-height: 1.6;
+  }
+
+  .landing {
+    max-width: var(--max-width);
+    margin: 0 auto;
+    padding: 2rem 1.5rem;
+  }
+
+  .hero {
+    text-align: center;
+    padding: 4rem 0 3rem;
+  }
+
+  .hero h1 {
+    font-size: 2.5rem;
+    font-weight: 800;
+    line-height: 1.2;
+    margin-bottom: 1rem;
+  }
+
+  .subheadline {
+    font-size: 1.25rem;
+    color: var(--color-text-muted);
+    margin-bottom: 2rem;
+  }
+
+  .email-capture {
+    display: flex;
+    gap: 0.5rem;
+    max-width: 480px;
+    margin: 0 auto 1rem;
+  }
+
+  .email-capture input[type="email"] {
+    flex: 1;
+    padding: 0.875rem 1rem;
+    border: 2px solid var(--color-border);
+    border-radius: 0.5rem;
+    font-size: 1rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .email-capture input[type="email"]:focus {
+    border-color: var(--color-primary);
+  }
+
+  .email-capture button {
+    padding: 0.875rem 1.5rem;
+    background: var(--color-primary);
+    color: white;
+    border: none;
+    border-radius: 0.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+    white-space: nowrap;
+  }
+
+  .email-capture button:hover {
+    background: var(--color-primary-dark);
+  }
+
+  .trust-signal {
+    font-size: 0.875rem;
+    color: var(--color-text-muted);
+  }
+
+  section {
+    padding: 3rem 0;
+  }
+
+  section h2 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+  }
+
+  .pain-points ul {
+    list-style: none;
+    padding: 0;
+  }
+
+  .pain-points li {
+    padding: 0.75rem 0;
+    padding-left: 1.5rem;
+    position: relative;
+  }
+
+  .pain-points li::before {
+    content: "→";
+    position: absolute;
+    left: 0;
+    color: var(--color-primary);
+  }
+
+  .social-proof {
+    background: var(--color-bg-alt);
+    border-radius: 1rem;
+    padding: 2rem;
+  }
+
+  blockquote p {
+    font-style: italic;
+    font-size: 1.125rem;
+    color: var(--color-text);
+  }
+
+  .final-cta {
+    text-align: center;
+    padding: 4rem 0;
+  }
+
+  .final-cta h2 {
+    margin-bottom: 1.5rem;
+  }
+
+  @media (max-width: 640px) {
+    .hero h1 {
+      font-size: 1.875rem;
+    }
+
+    .email-capture {
+      flex-direction: column;
+    }
+  }
+</style>

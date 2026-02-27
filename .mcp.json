@@ -1,0 +1,56 @@
+{
+  "mcpServers": {
+    "mcp-prospector": {
+      "command": "node",
+      "args": ["packages/mcp-prospector/dist/index.js"],
+      "env": {
+        "SUPABASE_URL": "${SUPABASE_URL}",
+        "SUPABASE_SERVICE_ROLE_KEY": "${SUPABASE_SERVICE_ROLE_KEY}",
+        "HUNTER_API_KEY": "${HUNTER_API_KEY}",
+        "CLEARBIT_API_KEY": "${CLEARBIT_API_KEY}",
+        "CLAY_API_KEY": "${CLAY_API_KEY}"
+      }
+    },
+    "mcp-content": {
+      "command": "node",
+      "args": ["packages/mcp-content/dist/index.js"],
+      "env": {
+        "SUPABASE_URL": "${SUPABASE_URL}",
+        "SUPABASE_SERVICE_ROLE_KEY": "${SUPABASE_SERVICE_ROLE_KEY}",
+        "ANTHROPIC_API_KEY": "${ANTHROPIC_API_KEY}",
+        "GHOST_API_URL": "${GHOST_API_URL}",
+        "GHOST_ADMIN_API_KEY": "${GHOST_ADMIN_API_KEY}",
+        "RESEND_API_KEY": "${RESEND_API_KEY}"
+      }
+    },
+    "mcp-outreach": {
+      "command": "node",
+      "args": ["packages/mcp-outreach/dist/index.js"],
+      "env": {
+        "SUPABASE_URL": "${SUPABASE_URL}",
+        "SUPABASE_SERVICE_ROLE_KEY": "${SUPABASE_SERVICE_ROLE_KEY}",
+        "INSTANTLY_API_KEY": "${INSTANTLY_API_KEY}",
+        "LOOPS_API_KEY": "${LOOPS_API_KEY}",
+        "RESEND_API_KEY": "${RESEND_API_KEY}"
+      }
+    },
+    "mcp-router": {
+      "command": "node",
+      "args": ["packages/mcp-router/dist/index.js"],
+      "env": {
+        "SUPABASE_URL": "${SUPABASE_URL}",
+        "SUPABASE_SERVICE_ROLE_KEY": "${SUPABASE_SERVICE_ROLE_KEY}"
+      }
+    },
+    "mcp-analytics": {
+      "command": "node",
+      "args": ["packages/mcp-analytics/dist/index.js"],
+      "env": {
+        "SUPABASE_URL": "${SUPABASE_URL}",
+        "SUPABASE_SERVICE_ROLE_KEY": "${SUPABASE_SERVICE_ROLE_KEY}",
+        "POSTHOG_API_KEY": "${POSTHOG_API_KEY}",
+        "POSTHOG_HOST": "${POSTHOG_HOST}"
+      }
+    }
+  }
+}
