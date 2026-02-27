@@ -1,4 +1,8 @@
-import { getSupabaseClient } from "@prospecting-engine/shared";
+import { getSupabaseClient, type Database } from "@prospecting-engine/shared";
+
+type LeadMagnetRow = Database["public"]["Tables"]["lead_magnets"]["Row"];
+type SaasProductRow = Database["public"]["Tables"]["saas_products"]["Row"];
+type EmailSequenceRow = Database["public"]["Tables"]["email_sequences"]["Row"];
 
 interface GenerateInput {
   leadMagnetId: string;
@@ -35,6 +39,7 @@ export class EmailSequenceService {
       .from("lead_magnets")
       .select("*")
       .eq("id", input.leadMagnetId)
+      .returns<LeadMagnetRow[]>()
       .single();
 
     if (!magnet) {
@@ -48,6 +53,7 @@ export class EmailSequenceService {
         .from("saas_products")
         .select("*")
         .eq("id", productId)
+        .returns<SaasProductRow[]>()
         .single();
       product = data;
     }
@@ -74,6 +80,7 @@ export class EmailSequenceService {
         active: true,
       })
       .select()
+      .returns<EmailSequenceRow[]>()
       .single();
 
     if (error || !sequence) {

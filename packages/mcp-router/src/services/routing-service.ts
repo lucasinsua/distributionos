@@ -1,4 +1,10 @@
-import { getSupabaseClient } from "@prospecting-engine/shared";
+import { getSupabaseClient, type Database } from "@prospecting-engine/shared";
+
+type LeadRow = Database["public"]["Tables"]["leads"]["Row"];
+type CompanyRow = Database["public"]["Tables"]["companies"]["Row"];
+type SaasProductRow = Database["public"]["Tables"]["saas_products"]["Row"];
+type LeadMagnetRow = Database["public"]["Tables"]["lead_magnets"]["Row"];
+type InteractionRow = Database["public"]["Tables"]["interactions"]["Row"];
 
 interface RouteResult {
   leadId: string;
@@ -35,6 +41,7 @@ export class RoutingService {
       .from("leads")
       .select("*, companies(*)")
       .eq("id", leadId)
+      .returns<(LeadRow & { companies: CompanyRow | null })[]>()
       .single();
 
     if (!lead) throw new Error("Lead not found");
@@ -43,7 +50,8 @@ export class RoutingService {
     const { data: products } = await db
       .from("saas_products")
       .select("*")
-      .eq("active", true);
+      .eq("active", true)
+      .returns<SaasProductRow[]>();
 
     if (!products || products.length === 0) {
       return { leadId, matchedProduct: null, alternativeProducts: [], routing: "unmatched" };
@@ -122,7 +130,8 @@ export class RoutingService {
     const { data: magnets } = await db
       .from("lead_magnets")
       .select("id")
-      .eq("target_saas_product_id", productId);
+      .eq("target_saas_product_id", productId)
+      .returns<Pick<LeadMagnetRow, "id">[]>();
 
     if (magnets && magnets.length > 0) {
       const magnetIds = magnets.map((m) => m.id);
@@ -130,7 +139,8 @@ export class RoutingService {
         .from("interactions")
         .select("*")
         .eq("lead_id", lead.id as string)
-        .in("type", ["form_submit", "content_download", "course_complete"]);
+        .in("type", ["form_submit", "content_download", "course_complete"])
+        .returns<InteractionRow[]>();
 
       if (interactions) {
         const magnetInteractions = interactions.filter((i) => {

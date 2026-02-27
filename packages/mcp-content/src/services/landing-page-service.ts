@@ -1,4 +1,7 @@
-import { getSupabaseClient } from "@prospecting-engine/shared";
+import { getSupabaseClient, type Database } from "@prospecting-engine/shared";
+
+type LeadMagnetRow = Database["public"]["Tables"]["lead_magnets"]["Row"];
+type SaasProductRow = Database["public"]["Tables"]["saas_products"]["Row"];
 
 interface GenerateInput {
   leadMagnetId: string;
@@ -37,6 +40,7 @@ export class LandingPageService {
       .from("lead_magnets")
       .select("*, saas_products:target_saas_product_id(*)")
       .eq("id", input.leadMagnetId)
+      .returns<(LeadMagnetRow & { saas_products: SaasProductRow | null })[]>()
       .single();
 
     if (error || !magnet) {

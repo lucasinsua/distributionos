@@ -1,4 +1,7 @@
-import { getSupabaseClient } from "@prospecting-engine/shared";
+import { getSupabaseClient, type Database } from "@prospecting-engine/shared";
+
+type CompanyRow = Database["public"]["Tables"]["companies"]["Row"];
+type ProspectListRow = Database["public"]["Tables"]["prospect_lists"]["Row"];
 
 interface BuildResult {
   listId: string;
@@ -37,7 +40,8 @@ export class ProspectListService {
         saas_product_id: options.saasProductId ?? null,
       })
       .select()
-      .single();
+      .single()
+      .returns<ProspectListRow>();
 
     if (error || !list) {
       throw new Error(`Failed to create prospect list: ${error?.message}`);
@@ -64,7 +68,8 @@ export class ProspectListService {
             { onConflict: "domain" }
           )
           .select()
-          .single();
+          .single()
+          .returns<CompanyRow>();
 
         // Create lead if email found
         if (prospect.email && company) {

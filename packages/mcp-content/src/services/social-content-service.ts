@@ -1,4 +1,6 @@
-import { getSupabaseClient } from "@prospecting-engine/shared";
+import { getSupabaseClient, type Database } from "@prospecting-engine/shared";
+
+type ContentRow = Database["public"]["Tables"]["content"]["Row"];
 
 interface GenerateInput {
   topic: string;
@@ -73,6 +75,7 @@ export class SocialContentService {
         status: needsReview ? "pending_review" : "draft",
       })
       .select()
+      .returns<ContentRow[]>()
       .single();
 
     if (error || !record) {

@@ -1,4 +1,7 @@
-import { getSupabaseClient } from "@prospecting-engine/shared";
+import { getSupabaseClient, type Database } from "@prospecting-engine/shared";
+
+type LeadRow = Database["public"]["Tables"]["leads"]["Row"];
+type EmailSequenceRow = Database["public"]["Tables"]["email_sequences"]["Row"];
 
 interface AssignResult {
   leadId: string;
@@ -25,6 +28,7 @@ export class NurtureTrackService {
       .from("leads")
       .select("*")
       .eq("id", leadId)
+      .returns<LeadRow[]>()
       .single();
 
     if (!lead) throw new Error("Lead not found");
@@ -41,7 +45,8 @@ export class NurtureTrackService {
       .select("*")
       .eq("saas_product_id", productId)
       .eq("type", "nurture")
-      .eq("active", true);
+      .eq("active", true)
+      .returns<EmailSequenceRow[]>();
 
     if (!sequences || sequences.length === 0) {
       return { leadId, trackType: "unassigned", assignedSequences: [] };

@@ -2,10 +2,16 @@ import {
   getSupabaseClient,
   calculateLeadScore,
   getQualificationTier,
+  type Database,
   type FitSignals,
   type IntentSignals,
   type EngagementSignals,
 } from "@prospecting-engine/shared";
+
+type LeadRow = Database["public"]["Tables"]["leads"]["Row"];
+type CompanyRow = Database["public"]["Tables"]["companies"]["Row"];
+type SaasProductRow = Database["public"]["Tables"]["saas_products"]["Row"];
+type InteractionRow = Database["public"]["Tables"]["interactions"]["Row"];
 
 interface ScoreOptions {
   forceRefresh: boolean;
@@ -40,6 +46,7 @@ export class LeadScoringService {
       .from("leads")
       .select("*, companies(*)")
       .eq("id", leadId)
+      .returns<(LeadRow & { companies: CompanyRow | null })[]>()
       .single();
 
     if (!lead) throw new Error("Lead not found");
@@ -116,6 +123,7 @@ export class LeadScoringService {
       .from("saas_products")
       .select("*")
       .eq("id", productId)
+      .returns<SaasProductRow[]>()
       .single();
 
     if (!product) {
@@ -161,7 +169,8 @@ export class LeadScoringService {
     const { data: interactions } = await db
       .from("interactions")
       .select("*")
-      .eq("lead_id", leadId);
+      .eq("lead_id", leadId)
+      .returns<InteractionRow[]>();
 
     if (!interactions) {
       return {
@@ -191,7 +200,8 @@ export class LeadScoringService {
       .from("interactions")
       .select("*")
       .eq("lead_id", leadId)
-      .order("timestamp", { ascending: false });
+      .order("timestamp", { ascending: false })
+      .returns<InteractionRow[]>();
 
     if (!interactions || interactions.length === 0) {
       return {

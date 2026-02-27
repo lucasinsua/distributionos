@@ -1,4 +1,6 @@
-import { getSupabaseClient } from "@prospecting-engine/shared";
+import { getSupabaseClient, type Database } from "@prospecting-engine/shared";
+
+type PainPointRow = Database["public"]["Tables"]["pain_points"]["Row"];
 
 interface PainPointResult {
   topic: string;
@@ -37,7 +39,8 @@ export class PainPointService {
       .select("*")
       .ilike("topic", `%${niche}%`)
       .order("composite_score", { ascending: false })
-      .limit(options.maxResults);
+      .limit(options.maxResults)
+      .returns<PainPointRow[]>();
 
     if (cached && cached.length > 0) {
       return cached.map((p) => ({
@@ -108,37 +111,33 @@ export class PainPointService {
   }
 
   private async scrapeReddit(
-    niche: string
+    _niche: string
   ): Promise<Array<{ source: string; content: string; url: string | null; timestamp: string }>> {
     // Reddit API integration: search subreddits for pain-point language
     // Patterns: "is there a tool", "I wish", "frustrated with", "looking for"
     // Uses Reddit JSON API (append .json to URLs) or Pushshift
-    // TODO: Implement Reddit API client
     return [];
   }
 
   private async scrapeHackerNews(
-    niche: string
+    _niche: string
   ): Promise<Array<{ source: string; content: string; url: string | null; timestamp: string }>> {
     // HN Algolia API: search Ask HN, Show HN, and comments
     // Endpoint: https://hn.algolia.com/api/v1/search
-    // TODO: Implement HN API client
     return [];
   }
 
   private async scrapeTwitter(
-    niche: string
+    _niche: string
   ): Promise<Array<{ source: string; content: string; url: string | null; timestamp: string }>> {
     // Twitter/X API v2: search recent tweets for pain-point keywords
-    // TODO: Implement Twitter API client
     return [];
   }
 
   private async scrapeIndieHackers(
-    niche: string
+    _niche: string
   ): Promise<Array<{ source: string; content: string; url: string | null; timestamp: string }>> {
     // Indie Hackers: scrape discussion threads
-    // TODO: Implement IH scraper
     return [];
   }
 

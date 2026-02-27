@@ -1,4 +1,7 @@
-import { getSupabaseClient } from "@prospecting-engine/shared";
+import { getSupabaseClient, type Database } from "@prospecting-engine/shared";
+
+type LeadRow = Database["public"]["Tables"]["leads"]["Row"];
+type LeadMagnetRow = Database["public"]["Tables"]["lead_magnets"]["Row"];
 
 interface FunnelMetrics {
   dateRange: { start: string; end: string };
@@ -44,7 +47,7 @@ export class FunnelService {
       query = query.eq("assigned_saas_product_id", saasProductId);
     }
 
-    const { data: leads } = await query;
+    const { data: leads } = await query.returns<LeadRow[]>();
     const allLeads = leads ?? [];
 
     const newLeads = allLeads.filter((l) => l.status === "new").length;
@@ -73,7 +76,7 @@ export class FunnelService {
       magnetQuery = magnetQuery.eq("target_saas_product_id", saasProductId);
     }
 
-    const { data: magnets } = await magnetQuery;
+    const { data: magnets } = await magnetQuery.returns<LeadMagnetRow[]>();
 
     const safe = (n: number, d: number) => (d > 0 ? Math.round((n / d) * 10000) / 10000 : 0);
 

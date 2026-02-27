@@ -1,4 +1,6 @@
-import { getSupabaseClient } from "@prospecting-engine/shared";
+import { getSupabaseClient, type Database } from "@prospecting-engine/shared";
+
+type SignalRow = Database["public"]["Tables"]["signals"]["Row"];
 
 interface PersonalizationResult {
   leadId: string;
@@ -98,7 +100,8 @@ export class PersonalizationService {
         .select("*")
         .eq("entity_domain", domain)
         .order("created_at", { ascending: false })
-        .limit(3);
+        .limit(3)
+        .returns<SignalRow[]>();
 
       if (recentSignals) {
         signals.painPoints = recentSignals.map((s) => s.content).slice(0, 3);

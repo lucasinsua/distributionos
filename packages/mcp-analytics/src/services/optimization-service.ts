@@ -1,4 +1,6 @@
-import { getSupabaseClient } from "@prospecting-engine/shared";
+import { getSupabaseClient, type Database } from "@prospecting-engine/shared";
+
+type LeadRow = Database["public"]["Tables"]["leads"]["Row"];
 
 interface OptimizationResult {
   lookbackDays: number;
@@ -28,7 +30,8 @@ export class OptimizationService {
     const { data: leads } = await db
       .from("leads")
       .select("*")
-      .gte("created_at", startDate);
+      .gte("created_at", startDate)
+      .returns<LeadRow[]>();
 
     const allLeads = leads ?? [];
     const byChannel = new Map<string, typeof allLeads>();

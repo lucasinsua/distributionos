@@ -1,4 +1,7 @@
-import { getSupabaseClient } from "@prospecting-engine/shared";
+import { getSupabaseClient, type Database } from "@prospecting-engine/shared";
+
+type LeadMagnetRow = Database["public"]["Tables"]["lead_magnets"]["Row"];
+type SaasProductRow = Database["public"]["Tables"]["saas_products"]["Row"];
 
 interface GenerateInput {
   topic: string;
@@ -32,6 +35,7 @@ export class LeadMagnetService {
       .from("saas_products")
       .select("*")
       .eq("id", input.targetSaasProductId)
+      .returns<SaasProductRow[]>()
       .single();
 
     const title = input.title ?? this.generateTitle(input.topic, input.format);
@@ -83,6 +87,7 @@ export class LeadMagnetService {
         content_data: contentData,
       })
       .select()
+      .returns<LeadMagnetRow[]>()
       .single();
 
     if (error || !magnet) {

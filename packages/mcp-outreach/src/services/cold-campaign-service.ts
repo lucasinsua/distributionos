@@ -1,4 +1,7 @@
-import { getSupabaseClient, getMaxSendsForDay } from "@prospecting-engine/shared";
+import { getSupabaseClient, getMaxSendsForDay, type Database } from "@prospecting-engine/shared";
+
+type ProspectListRow = Database["public"]["Tables"]["prospect_lists"]["Row"];
+type CampaignRow = Database["public"]["Tables"]["campaigns"]["Row"];
 
 interface LaunchInput {
   prospectListId: string;
@@ -37,7 +40,8 @@ export class ColdCampaignService {
       .from("prospect_lists")
       .select("*")
       .eq("id", input.prospectListId)
-      .single();
+      .single()
+      .returns<ProspectListRow>();
 
     if (!list) throw new Error("Prospect list not found");
 
@@ -82,7 +86,8 @@ export class ColdCampaignService {
         started_at: input.startImmediately ? new Date().toISOString() : null,
       })
       .select()
-      .single();
+      .single()
+      .returns<CampaignRow>();
 
     if (error || !campaign) {
       throw new Error(`Failed to create campaign: ${error?.message}`);

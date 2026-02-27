@@ -1,4 +1,7 @@
-import { getSupabaseClient } from "@prospecting-engine/shared";
+import { getSupabaseClient, type Database } from "@prospecting-engine/shared";
+
+type LeadRow = Database["public"]["Tables"]["leads"]["Row"];
+type CampaignRow = Database["public"]["Tables"]["campaigns"]["Row"];
 
 interface ChannelMetric {
   channel: string;
@@ -28,7 +31,8 @@ export class ChannelPerformanceService {
       .from("leads")
       .select("*")
       .gte("created_at", startDate)
-      .lte("created_at", endDate);
+      .lte("created_at", endDate)
+      .returns<LeadRow[]>();
 
     const allLeads = leads ?? [];
 
@@ -45,7 +49,8 @@ export class ChannelPerformanceService {
       .from("campaigns")
       .select("*")
       .gte("created_at", startDate)
-      .lte("created_at", endDate);
+      .lte("created_at", endDate)
+      .returns<CampaignRow[]>();
 
     const costByChannel = new Map<string, number>();
     for (const campaign of campaigns ?? []) {

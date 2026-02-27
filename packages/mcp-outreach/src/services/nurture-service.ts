@@ -1,4 +1,7 @@
-import { getSupabaseClient } from "@prospecting-engine/shared";
+import { getSupabaseClient, type Database } from "@prospecting-engine/shared";
+
+type EmailSequenceRow = Database["public"]["Tables"]["email_sequences"]["Row"];
+type InteractionRow = Database["public"]["Tables"]["interactions"]["Row"];
 
 interface EnrollOptions {
   skipIfActive: boolean;
@@ -37,7 +40,8 @@ export class NurtureService {
       .from("email_sequences")
       .select("*")
       .eq("id", sequenceId)
-      .single();
+      .single()
+      .returns<EmailSequenceRow>();
 
     if (!sequence) throw new Error("Sequence not found");
     if (!sequence.active) {
@@ -52,7 +56,8 @@ export class NurtureService {
         .eq("lead_id", leadId)
         .eq("type", "course_step_complete")
         .order("timestamp", { ascending: false })
-        .limit(1);
+        .limit(1)
+        .returns<InteractionRow[]>();
 
       if (activeInteractions && activeInteractions.length > 0) {
         const lastActivity = new Date(activeInteractions[0]!.timestamp);

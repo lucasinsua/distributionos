@@ -1,4 +1,9 @@
-import { getSupabaseClient } from "@prospecting-engine/shared";
+import { getSupabaseClient, type Database } from "@prospecting-engine/shared";
+
+type LeadRow = Database["public"]["Tables"]["leads"]["Row"];
+type ContentRow = Database["public"]["Tables"]["content"]["Row"];
+type CampaignRow = Database["public"]["Tables"]["campaigns"]["Row"];
+type LeadMagnetRow = Database["public"]["Tables"]["lead_magnets"]["Row"];
 
 export class ReportService {
   /**
@@ -18,23 +23,27 @@ export class ReportService {
       .from("leads")
       .select("*")
       .gte("created_at", startDate)
-      .lte("created_at", endDate);
+      .lte("created_at", endDate)
+      .returns<LeadRow[]>();
 
     const { data: content } = await db
       .from("content")
       .select("*")
       .gte("created_at", startDate)
-      .lte("created_at", endDate);
+      .lte("created_at", endDate)
+      .returns<ContentRow[]>();
 
     const { data: campaigns } = await db
       .from("campaigns")
       .select("*")
-      .gte("created_at", startDate);
+      .gte("created_at", startDate)
+      .returns<CampaignRow[]>();
 
     const { data: magnets } = await db
       .from("lead_magnets")
       .select("*")
-      .gte("created_at", startDate);
+      .gte("created_at", startDate)
+      .returns<LeadMagnetRow[]>();
 
     const allLeads = leads ?? [];
     const allContent = content ?? [];
